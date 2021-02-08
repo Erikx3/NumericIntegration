@@ -24,7 +24,7 @@ if __name__ == "__main__":
     d = 0.3  # kg/s
     m = 2  # kg
     z0 = 1000  # Initial height in m
-    t_sim = 25  # s
+    t_sim = 24.99  # s
     steps = 10000  # In whole t0-t_sim time
 
     step_size = t_sim/steps
@@ -67,13 +67,13 @@ if __name__ == "__main__":
 
     # ---------- Explicit Euler Method (non vectorized) -----------
 
-    dts = [4, 1, 0.25]
+    dts = [4, 2, 1]
     z_n_all_res = []
     for dt in dts:
         t_acc = 0
         z_n = z0
         v_n = 0
-        z_n_res = []
+        z_n_res = [z_n]
         while t_acc < t_sim:
             # First eq
             f_1 = v_n
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     plt.figure()
     plt.plot(z_t_ref[:, 0], z_t_ref[:, 1], 'r-', linewidth=2, label="Reference")
     for count, dt in enumerate(dts):
-        plt.plot(np.arange(0, t_sim, dt), z_n_all_res[count], '--', linewidth=2, label="Euler h={}s".format(str(dt)))
+        plt.plot(np.arange(0, t_sim+dt, dt), z_n_all_res[count], '--', linewidth=2, label="Euler h={}s".format(str(dt)))
     plt.title("Euler")
     plt.ylabel("Höhe[m]")
     plt.xlabel("t[s]")
@@ -107,8 +107,9 @@ if __name__ == "__main__":
     z_n = z0
     v_n = 0
     Y_n = np.array([z_n, v_n])  # See state vector or scipy solution!
-    dt = 0.25
-    z_n_euler_res = []
+    dt = 2
+    z_n_euler_res = [Y_n[0]]
+    #t_sim = 100
 
     def f(t, Y):
         return np.array([Y[1], -d/m * Y[1] - g])
@@ -127,7 +128,7 @@ if __name__ == "__main__":
     # Plot and compare results of Euler Method
     plt.figure()
     plt.plot(z_t_ref[:, 0], z_t_ref[:, 1], 'r-', linewidth=2, label="Reference")
-    plt.plot(np.arange(0, t_sim, dt), z_n_euler_res, 'b-', linewidth=2, label="Euler Vectorized")
+    plt.plot(np.arange(0, t_sim+dt, dt), z_n_euler_res, 'b-', linewidth=2, label="Euler Vectorized")
     plt.title("Euler Vectorized Check")
     plt.ylabel("Höhe[m]")
     plt.xlabel("t[s]")
@@ -142,8 +143,8 @@ if __name__ == "__main__":
     z_n = z0
     v_n = 0
     Y_n = np.array([z_n, v_n])  # See state vector or scipy solution!
-    dt = 0.25
-    z_n_RK4_res = []
+    dt = 2
+    z_n_RK4_res = [Y_n[0]]
 
     def f(t, Y):
         return np.array([Y[1], -d/m * Y[1] - g])
@@ -156,6 +157,14 @@ if __name__ == "__main__":
         Y_nplus1 = Y_n + h/6 * (k1 + 2*k2 + 2*k3 + k4)
         return Y_nplus1
 
+    while t_acc < t_sim:
+        # Calculate next time step
+        Y_n = RK4(f, t_acc, dt, Y_n)
+        # Save result (height z)
+        z_n_RK4_res.append(Y_n[0])
+        # Add sim time
+        t_acc += dt
+
     # Other formula alternative
     # def RK4(fun, t_n, h, Y_n):
     #     k1 = h * fun(t_n, Y_n)
@@ -165,19 +174,12 @@ if __name__ == "__main__":
     #     Y_nplus1 = Y_n + 1/6 * (k1 + 2*k2 + 2*k3 + k4)
     #     return Y_nplus1
 
-    while t_acc < t_sim:
-        # Calculate next time step
-        Y_n = RK4(f, t_acc, dt, Y_n)
-        # Save result (height z)
-        z_n_RK4_res.append(Y_n[0])
-        # Add sim time
-        t_acc += dt
-
     # Plot and compare results of Euler Method
     plt.figure()
     plt.plot(z_t_ref[:, 0], z_t_ref[:, 1], 'r-', linewidth=2, label="Reference")
-    plt.plot(np.arange(0, t_sim, dt), z_n_RK4_res, 'b-', linewidth=2, label="RK4 Vectorized")
-    plt.title("RK4 Vectorized")
+    plt.plot(np.arange(0, t_sim+dt, dt), z_n_RK4_res, 'b--*', linewidth=1, label="RK4")
+    plt.plot(np.arange(0, t_sim+dt, dt), z_n_euler_res, 'g--*', linewidth=1, label="Explicit Euler")
+    plt.title("RK4-Euler Vergleich h={}s".format(dt))
     plt.ylabel("Höhe[m]")
     plt.xlabel("t[s]")
     plt.ylim([0, z0])
@@ -186,3 +188,20 @@ if __name__ == "__main__":
     plt.grid()
 
     plt.show()
+
+    # # Test other function to proof RK4
+    # def f(t,y):
+    #     return t * np.sqrt(y)
+    #
+    # t_acc = 0
+    # Y_n = 1
+    # Y_e = 1
+    # t_sim = 0.99
+    # dt = 0.1
+    # while t_acc < t_sim:
+    #     # Calculate next time step
+    #     Y_n = RK4(f, t_acc, dt, Y_n)
+    #     Y_e = euler(f, t_acc, dt, Y_e)
+    #     t_acc += dt
+    #
+    # print(t_acc, Y_n, Y_e)
